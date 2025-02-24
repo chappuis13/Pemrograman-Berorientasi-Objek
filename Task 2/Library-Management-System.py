@@ -20,13 +20,13 @@ class Book:
             print(f"{self.title} by {self.author} is already available.")
             
 books = [
-    Book("Harry Potter", "J.K. Rowling", "978-3-16-148410-0"),
-    Book("The Hobbit", "J.R.R. Tolkien", "978-3-16-148410-1"),
-    Book("The Lord of the Rings", "J.R.R. Tolkien", "978-3-16-148410-2"),
-    Book("The Chronicles of Narnia", "C.S. Lewis", "978-3-16-148410-3"),
-    Book("The Hunger Games", "Suzanne Collins", "978-3-16-148410-4"),
-    Book("Twilight", "Stephenie Meyer", "978-3-16-148410-5"),
-    Book("The Da Vinci Code", "Dan Brown", "978-3-16-148410-6"),    
+    Book("1984", "George Orwell", "978-0-452-28423-4"),
+    Book("To Kill a Mockingbird", "Harper Lee", "978-0-06-112008-4"),
+    Book("Pride and Prejudice", "Jane Austen", "978-0-14-143951-8"),
+    Book("The Catcher in the Rye", "J.D. Salinger", "978-0-316-76948-0"),
+    Book("Moby-Dick", "Herman Melville", "978-0-14-243724-7"),
+    Book("The Great Gatsby", "F. Scott Fitzgerald", "978-0-7432-7356-5"),
+    Book("Brave New World", "Aldous Huxley", "978-0-06-085052-4"),
 ]
 
 borrowed_books = []
