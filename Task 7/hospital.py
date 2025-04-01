@@ -73,28 +73,28 @@ class Hospital:
         return f"Hospital: {self.name}, Departments: {[department.departmen_name for department in self.departments]}"
     
 # Example
-hospital = Hospital("Mayzh Hospital")
+hospital = Hospital("SekarHarum Hospital")
 
-dep1 = Department("Cardiology")
-dep2 = Department("Neurology")
+dep1 = Department("Psychiatrist")
+dep2 = Department("Cardiology")
 
 hospital.add_department(dep1)
 hospital.add_department(dep2)
 
-doc1 = Doctor(1, "Dr. Akmal Zaidan Ganteng", "Cardiology")
-doc2 = Doctor(2, "Dr. Budi", "Neurology")
+doc1 = Doctor(1, "Dr. Ayep Setia Budi", "Psychiatrist")
+doc2 = Doctor(2, "Dr. Junaedi", "Cardiology")
 
 dep1.add_doctor(doc1)
 dep2.add_doctor(doc2)
 
-pat1 = Patient(1, "John Doe", 30)
-pat2 = Patient(2, "Jane Doe", 25)
+pat1 = Patient(1, "Asep Goes", 20)
+pat2 = Patient(2, "Subagdja", 35)
 
 doc1.add_patient(pat1)
 doc2.add_patient(pat2)
 
-pat1.add_medical_record(1, "Fever", "Rest and fluids")
-pat2.add_medical_record(2, "Headache", "Ibuprofen")
+pat1.add_medical_record(1, "Antidepresan", "Mood Stabilizer and Stimulan")
+pat2.add_medical_record(2, "Fever", "Rest and fluids")
 
 print(hospital.show_departments())
 print(pat1.show_records())
