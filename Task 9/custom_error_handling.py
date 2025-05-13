@@ -1,216 +1,130 @@
-
-# ==========================================
-# Custom Exceptions for Order Processing
-# ==========================================
-class OrderError(Exception):
-    """Base class for order processing errors."""
+# Custom Exceptions
+class LibraryError(Exception):
+    """Base class for library system errors."""
     pass
 
-class OutOfStockError(OrderError):
-    """Raised when a product is out of stock."""
-    def __init__(self, product_id, requested, available):
-        message = (f"Product {product_id} is out of stock: "
+class BookNotAvailableError(LibraryError):
+    """Raised when a book is not available for borrowing."""
+    def __init__(self, book_id, requested, available):
+        message = (f"Book {book_id} is not available: "
                    f"requested {requested}, available {available}.")
         super().__init__(message)
 
-class PaymentDeclinedError(OrderError):
-    """Raised when a payment is declined by the payment gateway."""
-    def __init__(self, reason):
-        message = f"Payment declined: {reason}"
+class MembershipExpiredError(LibraryError):
+    """Raised when a user tries to borrow a book with an expired membership."""
+    def __init__(self):
+        message = "Membership expired. Please renew to borrow books."
         super().__init__(message)
 
-class InvalidShippingAddressError(OrderError):
-    """Raised when the shipping address is invalid."""
-    def __init__(self, address):
-        message = f"Invalid shipping address: '{address}'."
+class BorrowLimitExceededError(LibraryError):
+    """Raised when a user tries to borrow more books than allowed."""
+    def __init__(self, limit):
+        message = f"Borrow limit exceeded. Max allowed: {limit} books."
         super().__init__(message)
 
 
-# ==========================================
 # System Components
-# ==========================================
-class Inventory:
+class LibraryCatalog:
     def __init__(self, stock):
+        # stock: dict mapping book_id to quantity available
         self.stock = stock
 
-    def reserve(self, product_id, quantity):
-        available = self.stock.get(product_id, 0)
+    def reserve(self, book_id, quantity):
+        available = self.stock.get(book_id, 0)
         if quantity > available:
-            raise OutOfStockError(product_id, quantity, available)
-        self.stock[product_id] -= quantity
-        print(f"[Inventory] Reserved {quantity} unit(s) of {product_id}.")
+            raise BookNotAvailableError(book_id, quantity, available)
+        self.stock[book_id] -= quantity
+        print(f"[Catalog] Reserved {quantity} copy/copies of {book_id}.")
 
-class PaymentProcessor:
-    def __init__(self, user_balance):
-        self.user_balance = user_balance
+class MembershipManager:
+    def __init__(self, is_active, borrowed_books, limit):
+        self.is_active = is_active
+        self.borrowed_books = borrowed_books
+        self.limit = limit
 
-    def charge(self, amount):
-        if amount > self.user_balance:
-            raise PaymentDeclinedError("Insufficient funds")
-        self.user_balance -= amount
-        print(f"[Payment] Charged ${amount:.2f}. Remaining balance: ${self.user_balance:.2f}.")
+    def authorize(self, quantity):
+        if not self.is_active:
+            raise MembershipExpiredError()
+        if self.borrowed_books + quantity > self.limit:
+            raise BorrowLimitExceededError(self.limit)
+        self.borrowed_books += quantity
+        print(f"[Membership] Authorized borrowing of {quantity} book(s). Now borrowed: {self.borrowed_books}.")
 
-class ShippingService:
-    def validate_address(self, address):
-        parts = address.strip().split()
-        if len(parts) < 2 or not parts[-1].isdigit():
-            raise InvalidShippingAddressError(address)
-        print(f"[Shipping] Address '{address}' is valid.")
+class LibraryRulesService:
+    def check_eligibility(self, member_id):
+        # Placeholder logic
+        print(f"[Rules] Member {member_id} is eligible to borrow books.")
 
 
-# ==========================================
-# Order Processing Function
-# ==========================================
-def process_order(product_id, qty, price_per_unit, shipping_address,
-                  inventory, payment_processor, shipping_service):
+# Book Borrowing Function
+def borrow_book(book_id, qty, member_id,
+                catalog, membership_manager, rules_service):
     try:
-        inventory.reserve(product_id, qty)
-        shipping_service.validate_address(shipping_address)
-        total = qty * price_per_unit
-        payment_processor.charge(total)
+        # 1. Check book availability
+        catalog.reserve(book_id, qty)
 
-    except OutOfStockError as e:
-        print(f"Order failed: {e}")
-    except InvalidShippingAddressError as e:
-        print(f"Order failed: {e}")
-    except PaymentDeclinedError as e:
-        print(f"Order failed: {e}")
+        # 2. Check member eligibility
+        rules_service.check_eligibility(member_id)
+
+        # 3. Authorize borrowing
+        membership_manager.authorize(qty)
+
+    except BookNotAvailableError as e:
+        print(f"Borrowing failed: {e}")
+    except MembershipExpiredError as e:
+        print(f"Borrowing failed: {e}")
+    except BorrowLimitExceededError as e:
+        print(f"Borrowing failed: {e}")
     else:
-        print("Order succeeded!")
+        print("Book borrowing succeeded! Enjoy reading.")
     finally:
-        print("Order process complete.\n")
+        print("Borrowing process complete.\n")
 
 
-# ==========================================
-# Additional Program 1: User Authentication System
-# ==========================================
-class AuthError(Exception):
-    pass
-
-class UserNotFoundError(AuthError):
-    def __init__(self, username):
-        super().__init__(f"User '{username}' not found.")
-
-class InvalidPasswordError(AuthError):
-    def __init__(self):
-        super().__init__("Invalid password provided.")
-
-class AccountLockedError(AuthError):
-    def __init__(self):
-        super().__init__("Account is locked due to multiple failed login attempts.")
-
-class AuthSystem:
-    def __init__(self):
-        self.users = {
-            "alice": {"password": "secret123", "locked": False, "attempts": 0}
-        }
-
-    def login(self, username, password):
-        if username not in self.users:
-            raise UserNotFoundError(username)
-
-        user = self.users[username]
-        if user["locked"]:
-            raise AccountLockedError()
-
-        if password != user["password"]:
-            user["attempts"] += 1
-            if user["attempts"] >= 3:
-                user["locked"] = True
-            raise InvalidPasswordError()
-
-        user["attempts"] = 0
-        print(f"[Auth] Welcome, {username}!")
-
-
-# ==========================================
-# Additional Program 2: File Backup Manager
-# ==========================================
-class BackupError(Exception):
-    pass
-
-class FileNotFoundBackupError(BackupError):
-    def __init__(self, file_path):
-        super().__init__(f"File not found: {file_path}")
-
-class InsufficientStorageError(BackupError):
-    def __init__(self, needed, available):
-        super().__init__(f"Not enough storage: needed {needed}MB, available {available}MB.")
-
-class BackupManager:
-    def __init__(self, storage_mb):
-        self.storage_mb = storage_mb
-
-    def backup(self, file_path, file_size_mb):
-        if file_path != "important.docx":
-            raise FileNotFoundBackupError(file_path)
-        if file_size_mb > self.storage_mb:
-            raise InsufficientStorageError(file_size_mb, self.storage_mb)
-
-        self.storage_mb -= file_size_mb
-        print(f"[Backup] '{file_path}' backed up. Remaining storage: {self.storage_mb}MB")
-
-
-# ==========================================
-# Additional Program 3: Bank ATM Simulator
-# ==========================================
-class ATMError(Exception):
-    pass
-
-class InsufficientFundsError(ATMError):
-    def __init__(self, balance, requested):
-        super().__init__(f"Requested ${requested}, but balance is only ${balance}.")
-
-class DailyLimitExceededError(ATMError):
-    def __init__(self, requested, limit):
-        super().__init__(f"Daily limit exceeded: requested ${requested}, limit is ${limit}.")
-
-class ATM:
-    def __init__(self, balance, daily_limit):
-        self.balance = balance
-        self.daily_limit = daily_limit
-
-    def withdraw(self, amount):
-        if amount > self.balance:
-            raise InsufficientFundsError(self.balance, amount)
-        if amount > self.daily_limit:
-            raise DailyLimitExceededError(amount, self.daily_limit)
-
-        self.balance -= amount
-        print(f"[ATM] Dispensed ${amount}. Remaining balance: ${self.balance}")
-
-
-# ==========================================
-# Example Executions
-# ==========================================
+# Example Execution
 if __name__ == "__main__":
-    # Order Processing
-    inv = Inventory(stock={"SKU123": 5, "SKU999": 0})
-    pay = PaymentProcessor(user_balance=100.00)
-    ship = ShippingService()
+    catalog = LibraryCatalog(stock={"BOOK123": 3, "BOOK999": 0})
+    member = MembershipManager(is_active=True, borrowed_books=1, limit=5)
+    rules = LibraryRulesService()
 
-    process_order("SKU123", 2, 20.00, "10 Merdeka St 10110", inv, pay, ship)
-    process_order("SKU999", 1, 50.00, "10 Merdeka St 10110", inv, pay, ship)
-    process_order("SKU123", 1, 20.00, "Boulevard Raya", inv, pay, ship)
-    process_order("SKU123", 3, 30.00, "10 Merdeka St 10110", inv, pay, ship)
+    # 1. Successful borrow
+    borrow_book(
+        book_id="BOOK123",
+        qty=2,
+        member_id="MEM001",
+        catalog=catalog,
+        membership_manager=member,
+        rules_service=rules
+    )
 
-    # Auth System
-    auth = AuthSystem()
-    try:
-        auth.login("bob", "wrongpass")
-    except AuthError as e:
-        print(f"Login failed: {e}")
+    # 2. Book not available
+    borrow_book(
+        book_id="BOOK999",
+        qty=1,
+        member_id="MEM001",
+        catalog=catalog,
+        membership_manager=member,
+        rules_service=rules
+    )
 
-    # Backup Manager
-    backup = BackupManager(storage_mb=100)
-    try:
-        backup.backup("unknown.docx", 20)
-    except BackupError as e:
-        print(f"Backup failed: {e}")
+    # 3. Membership expired
+    member_expired = MembershipManager(is_active=False, borrowed_books=0, limit=5)
+    borrow_book(
+        book_id="BOOK123",
+        qty=1,
+        member_id="MEM002",
+        catalog=catalog,
+        membership_manager=member_expired,
+        rules_service=rules
+    )
 
-    # ATM Simulator
-    atm = ATM(balance=500, daily_limit=300)
-    try:
-        atm.withdraw(350)
-    except ATMError as e:
-        print(f"Withdrawal failed: {e}")
+    # 4. Borrow limit exceeded
+    member_limit = MembershipManager(is_active=True, borrowed_books=4, limit=5)
+    borrow_book(
+        book_id="BOOK123",
+        qty=2,
+        member_id="MEM003",
+        catalog=catalog,
+        membership_manager=member_limit,
+        rules_service=rules
+    )
